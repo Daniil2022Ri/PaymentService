@@ -3,9 +3,11 @@ package com.example.PaymentService.controller;
 import com.example.PaymentService.customExeption.PaymentAlreadyProcessedException;
 import com.example.PaymentService.customExeption.PaymentNotFoundException;
 import com.example.PaymentService.dto.PaymentRequest;
+import com.example.PaymentService.dto.PaymentResponseDto;
 import com.example.PaymentService.model.Payment;
-import com.example.PaymentService.repository.PaymentRepository;
 import com.example.PaymentService.service.PaymentService;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -15,24 +17,26 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/payments")
 @RequiredArgsConstructor
+@AllArgsConstructor
 @Slf4j
 public class PaymentController {
 
     private final PaymentService paymentService;
-    private final PaymentRepository paymentRepository;
 
     @PostMapping
-    public ResponseEntity<Payment> createPayment(@RequestBody PaymentRequest request) {
+    public ResponseEntity<PaymentResponseDto> createPayment(@RequestBody @Valid PaymentRequest request) {
         log.info("Creating payment for account: {}, amount: {}", request.getAccountId(), request.getAmount());
         Payment payment = paymentService.createPayment(request);
-        return ResponseEntity.ok(payment);
+        PaymentResponseDto responseDto = paymentToResponseDto(payment);
+        return ResponseEntity.ok(responseDto);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Payment> getPayment(@PathVariable Long id) {
-        return paymentRepository.findById(id)
+    public ResponseEntity<PaymentResponseDto> getPayment(@PathVariable Long id) {
+        return paymentService.findById(id)
+                .map(this::paymentToResponseDto)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + id));
     }
 
     @DeleteMapping("/{id}")
@@ -45,5 +49,15 @@ public class PaymentController {
         } catch (PaymentAlreadyProcessedException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
+    }
+
+    private PaymentResponseDto paymentToResponseDto(Payment payment) {
+        return new PaymentResponseDto(
+                payment.getId(),
+                payment.getAccountId(),
+                payment.getAmount(),
+                payment.getStatus(),
+                payment.getCreatedAt()
+        );
     }
 }

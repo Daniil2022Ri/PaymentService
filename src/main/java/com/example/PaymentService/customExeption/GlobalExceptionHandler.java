@@ -3,8 +3,11 @@ package com.example.PaymentService.customExeption;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@RestControllerAdvice
 public class GlobalExceptionHandler {
+
     @ExceptionHandler(PaymentNotFoundException.class)
     public ResponseEntity<String> handlePaymentNotFound(PaymentNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
@@ -13,5 +16,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InsufficientFundsException.class)
     public ResponseEntity<String> handleInsufficientFunds(InsufficientFundsException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    }
+
+    @ExceptionHandler(PaymentAlreadyProcessedException.class)
+    public ResponseEntity<String> handlePaymentAlreadyProcessed(PaymentAlreadyProcessedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
     }
 }

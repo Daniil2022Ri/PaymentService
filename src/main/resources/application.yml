@@ -4,7 +4,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payments
     username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:postgres}
+    password: ${POSTGRES_PASSWORD:1111}
   jpa:
     hibernate:
       ddl-auto: validate
