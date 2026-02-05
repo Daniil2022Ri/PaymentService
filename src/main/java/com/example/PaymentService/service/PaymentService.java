@@ -1,6 +1,8 @@
 package com.example.PaymentService.service;
 
 import com.example.PaymentService.config.RabbitConfig;
+import com.example.PaymentService.customExeption.PaymentAlreadyProcessedException;
+import com.example.PaymentService.customExeption.PaymentNotFoundException;
 import com.example.PaymentService.dto.PaymentRequest;
 import com.example.PaymentService.message.PaymentMessage;
 import com.example.PaymentService.model.Payment;
@@ -12,6 +14,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -47,6 +50,21 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(msg.getId()).orElseThrow();
         payment.setProcessed(true);
         payment.setStatus(PaymentStatus.COMPLETED);
+        paymentRepository.save(payment);
+    }
+    public Optional<Payment> findById(Long id) {
+        return paymentRepository.findById(id);
+    }
+
+    public void cancelPayment(Long id) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new PaymentNotFoundException("Cannot cancel: payment not found"));
+
+        if (payment.getProcessed()) {
+            throw new PaymentAlreadyProcessedException("Cannot cancel processed payment");
+        }
+
+        payment.setStatus(PaymentStatus.CANCELLED);
         paymentRepository.save(payment);
     }
 }
