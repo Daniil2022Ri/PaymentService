@@ -6,6 +6,13 @@ import com.example.PaymentService.dto.PaymentRequest;
 import com.example.PaymentService.dto.PaymentResponseDto;
 import com.example.PaymentService.model.Payment;
 import com.example.PaymentService.service.PaymentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +26,23 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Slf4j
+@Tag(name = "Payment API", description = "Operations related to payment processing")
 public class PaymentController {
 
     private final PaymentService paymentService;
 
     @PostMapping
-    public ResponseEntity<PaymentResponseDto> createPayment(@RequestBody @Valid PaymentRequest request) {
+    @Operation(summary = "Create a new payment", description = "Creates a payment request and processes it asynchronously")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Payment created successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = PaymentResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<PaymentResponseDto> createPayment(
+            @Parameter(description = "Payment request details", required = true)
+            @RequestBody @Valid PaymentRequest request) {
         log.info("Creating payment for account: {}, amount: {}", request.getAccountId(), request.getAmount());
         Payment payment = paymentService.createPayment(request);
         PaymentResponseDto responseDto = paymentToResponseDto(payment);
@@ -32,7 +50,16 @@ public class PaymentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PaymentResponseDto> getPayment(@PathVariable Long id) {
+    @Operation(summary = "Get payment by ID", description = "Retrieves payment information by its ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Payment found",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = PaymentResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Payment not found")
+    })
+    public ResponseEntity<PaymentResponseDto> getPayment(
+            @Parameter(description = "ID of the payment to retrieve", required = true)
+            @PathVariable Long id) {
         return paymentService.findById(id)
                 .map(this::paymentToResponseDto)
                 .map(ResponseEntity::ok)
@@ -40,7 +67,15 @@ public class PaymentController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelPayment(@PathVariable Long id) {
+    @Operation(summary = "Cancel a payment", description = "Cancels a payment if it hasn't been processed yet")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Payment cancelled successfully"),
+            @ApiResponse(responseCode = "404", description = "Payment not found"),
+            @ApiResponse(responseCode = "409", description = "Payment already processed")
+    })
+    public ResponseEntity<Void> cancelPayment(
+            @Parameter(description = "ID of the payment to cancel", required = true)
+            @PathVariable Long id) {
         try {
             paymentService.cancelPayment(id);
             return ResponseEntity.noContent().build();
@@ -51,7 +86,7 @@ public class PaymentController {
         }
     }
 
-    private PaymentResponseDto paymentToResponseDto(Payment payment) {
+    private PaymentResponseDto paymentToResponseDto(com.example.PaymentService.model.Payment payment) {
         return new PaymentResponseDto(
                 payment.getId(),
                 payment.getAccountId(),
